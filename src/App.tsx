@@ -35,6 +35,19 @@ function App() {
     setDrawing(false);
   };
 
+  const handleSave = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    // Send to backend
+    await fetch('http://localhost:4000/api/drawings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ drawingData: dataUrl, text: '' })
+    });
+    alert('Drawing saved!');
+  };
+
   return (
     <>
       <h2>Draw below!</h2>
@@ -48,6 +61,8 @@ function App() {
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
       />
+      <br />
+      <button onClick={handleSave}>Save Drawing</button>
     </>
   )
 }
