@@ -42,5 +42,3 @@ This project is a web app where users can draw, submit their drawing, and view a
 - Backend ready for AI moderation integration
 
 ---
-
-For more details, see `.github/copilot-instructions.md`.
