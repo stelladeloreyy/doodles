@@ -10,6 +10,7 @@ function App() {
   const [drawings, setDrawings] = useState<{ id: number, drawing_data: string, text: string, created_at: string }[]>([]);
   const [lines, setLines] = useState<Line[]>([]);
   const [currentLine, setCurrentLine] = useState<Line>([]);
+  const [showCanvas, setShowCanvas] = useState(true);
 
   // Fetch previous drawings on mount
   useEffect(() => {
@@ -146,7 +147,9 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ drawingData: dataUrl, text: '' })
     });
-    alert('Drawing saved!');
+
+    // alert('Drawing saved!');
+    
     // Refresh drawings list
     fetch('http://localhost:4000/api/drawings')
       .then(res => res.json())
@@ -162,34 +165,43 @@ function App() {
   };
 
   return (
-    <>
-      <h2>Draw below!</h2>
-      <canvas
-        ref={canvasRef}
-        width={400}
-        height={300}
-        style={{ border: '1px solid #ccc', background: '#fff', touchAction: 'none' }}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-      />
-      <br />
-      <button onClick={handleSave}>Save Drawing</button>
-      <button onClick={clearCanvas} style={{ marginLeft: 8 }}>Clear</button>
-      <button onClick={handleUndo} style={{ marginLeft: 8 }} disabled={lines.length === 0}>Undo</button>
-      <hr />
-      <h3>Previous Drawings</h3>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center' }}>
-        {drawings.map(d => (
-          <div key={d.id} style={{ border: '1px solid #ccc', padding: 8, background: '#fff' }}>
-            <img src={d.drawing_data} alt={`Drawing ${d.id}`} style={{ width: 120, height: 90, objectFit: 'contain', display: 'block' }} />
-            <div style={{ fontSize: 10, color: '#888' }}>{new Date(d.created_at).toLocaleString()}</div>
+    <div className='container'>
+      {showCanvas && (
+        <div className='creation-container'>
+          <h2>Draw below!</h2>
+          <canvas
+              ref={canvasRef}
+              width={window.innerWidth / 4}
+              height={window.innerWidth / 5}
+              style={{ border: '1px solid #ccc', background: '#fff', touchAction: 'none' }}
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
+          />
+          <br />
+          <button onClick={handleSave}>Save Drawing</button>
+          <button onClick={clearCanvas} style={{ marginLeft: 8 }}>Clear</button>
+          <button onClick={handleUndo} style={{ marginLeft: 8 }} disabled={lines.length === 0}>Undo</button>
+          <button onClick={() => setShowCanvas(false)}>Photo Display</button>
+        </div>
+      )}
+      {!showCanvas && (
+        <div className='display-container'>
+          <h3>Previous Drawings</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center', marginBottom: 20 }}>
+            {drawings.map(d => (
+              <div key={d.id} style={{ border: '1px solid #ccc', padding: 8, background: '#fff' }}>
+                <img src={d.drawing_data} alt={`Drawing ${d.id}`} style={{ width: window.innerWidth / 8, height: window.innerWidth / 10, objectFit: 'contain', display: 'block' }} />
+                <div style={{ fontSize: 10, color: '#888' }}>{new Date(d.created_at).toLocaleString()}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </>
+          <button onClick={() => setShowCanvas(true)}>Draw Photos</button>
+        </div>
+      )}
+    </div>
   )
 }
 
-export default App
+export default App;
