@@ -1,38 +1,139 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import './App.css'
+
+type Point = { x: number, y: number }
+type Line = Point[]
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
+  const [drawings, setDrawings] = useState<{ id: number, drawing_data: string, text: string, created_at: string }[]>([]);
+  const [lines, setLines] = useState<Line[]>([]);
+  const [currentLine, setCurrentLine] = useState<Line>([]);
 
-  const startDrawing = (e: React.MouseEvent) => {
-    setDrawing(true);
+  // Fetch previous drawings on mount
+  useEffect(() => {
+    fetch('http://localhost:4000/api/drawings')
+      .then(res => res.json())
+      .then(setDrawings)
+      .catch(() => setDrawings([]));
+  }, []);
+
+  // Chaikin's algorithm for smoothing a line
+  function smoothLine(line: { x: number, y: number }[], iterations = 2) {
+    let pts = line;
+    for (let iter = 0; iter < iterations; iter++) {
+      if (pts.length < 3) break;
+      const newPts = [pts[0]];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i];
+        const p1 = pts[i + 1];
+        newPts.push({
+          x: 0.75 * p0.x + 0.25 * p1.x,
+          y: 0.75 * p0.y + 0.25 * p1.y,
+        });
+        newPts.push({
+          x: 0.25 * p0.x + 0.75 * p1.x,
+          y: 0.25 * p0.y + 0.75 * p1.y,
+        });
+      }
+      newPts.push(pts[pts.length - 1]);
+      pts = newPts;
+    }
+    return pts;
+  }
+
+  // Redraw canvas when lines change
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.beginPath();
-    ctx.moveTo(
-      e.nativeEvent.offsetX,
-      e.nativeEvent.offsetY
-    );
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    lines.forEach(line => {
+      const smooth = smoothLine(line, 2); // Reduced iterations for less stabilization
+      if (smooth.length === 0) return;
+      ctx.beginPath();
+      ctx.moveTo(smooth[0].x, smooth[0].y);
+      for (let i = 1; i < smooth.length; i++) {
+        ctx.lineTo(smooth[i].x, smooth[i].y);
+      }
+      ctx.stroke();
+    });
+  }, [lines]);
+
+  const getOffset = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
+  const startDrawing = (e: React.MouseEvent) => {
+    setDrawing(true);
+    const { x, y } = getOffset(e);
+    setCurrentLine([{ x, y }]);
   };
 
   const draw = (e: React.MouseEvent) => {
     if (!drawing) return;
+    const { x, y } = getOffset(e);
+    setCurrentLine(line => [...line, { x, y }]);
+  };
+
+  const stopDrawing = () => {
+    if (drawing && currentLine.length > 0) {
+      setLines(lines => [...lines, currentLine]);
+      setCurrentLine([]);
+    }
+    setDrawing(false);
+  };
+
+  // Draw current line as user draws
+  useEffect(() => {
+    if (!drawing || currentLine.length < 2) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.lineTo(
-      e.nativeEvent.offsetX,
-      e.nativeEvent.offsetY
-    );
+    // Redraw everything to avoid artifacts
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    // Draw previous lines
+    lines.forEach(line => {
+      const smooth = smoothLine(line, 2); // Reduced iterations for less stabilization
+      if (smooth.length === 0) return;
+      ctx.beginPath();
+      ctx.moveTo(smooth[0].x, smooth[0].y);
+      for (let i = 1; i < smooth.length; i++) {
+        ctx.lineTo(smooth[i].x, smooth[i].y);
+      }
+      ctx.stroke();
+    });
+    // Draw current line (smoothed)
+    const smooth = smoothLine(currentLine, 2); // Reduced iterations for less stabilization
+    ctx.beginPath();
+    ctx.moveTo(smooth[0].x, smooth[0].y);
+    for (let i = 1; i < smooth.length; i++) {
+      ctx.lineTo(smooth[i].x, smooth[i].y);
+    }
     ctx.stroke();
-  };
+  }, [currentLine, drawing, lines]);
 
-  const stopDrawing = () => {
-    setDrawing(false);
+  const clearCanvas = () => {
+    setLines([]);
+    setCurrentLine([]);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
   const handleSave = async () => {
@@ -46,6 +147,18 @@ function App() {
       body: JSON.stringify({ drawingData: dataUrl, text: '' })
     });
     alert('Drawing saved!');
+    // Refresh drawings list
+    fetch('http://localhost:4000/api/drawings')
+      .then(res => res.json())
+      .then(setDrawings)
+      .catch(() => setDrawings([]));
+    // Clear the canvas after saving
+    clearCanvas();
+  };
+
+  const handleUndo = () => {
+    setLines(lines => lines.slice(0, -1));
+    setCurrentLine([]);
   };
 
   return (
@@ -63,6 +176,18 @@ function App() {
       />
       <br />
       <button onClick={handleSave}>Save Drawing</button>
+      <button onClick={clearCanvas} style={{ marginLeft: 8 }}>Clear</button>
+      <button onClick={handleUndo} style={{ marginLeft: 8 }} disabled={lines.length === 0}>Undo</button>
+      <hr />
+      <h3>Previous Drawings</h3>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center' }}>
+        {drawings.map(d => (
+          <div key={d.id} style={{ border: '1px solid #ccc', padding: 8, background: '#fff' }}>
+            <img src={d.drawing_data} alt={`Drawing ${d.id}`} style={{ width: 120, height: 90, objectFit: 'contain', display: 'block' }} />
+            <div style={{ fontSize: 10, color: '#888' }}>{new Date(d.created_at).toLocaleString()}</div>
+          </div>
+        ))}
+      </div>
     </>
   )
 }
