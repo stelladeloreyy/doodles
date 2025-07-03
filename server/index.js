@@ -23,21 +23,21 @@ async function aiModerationCheck(drawingData, text) {
 
 // Submit a new drawing
 app.post('/api/drawings', async (req, res) => {
-  const { drawingData, text } = req.body;
+  const { drawingData, text, author } = req.body;
   const moderation = await aiModerationCheck(drawingData, text);
   if (!moderation.allowed) {
     return res.status(403).json({ error: 'Inappropriate content', reason: moderation.reason });
   }
   const result = await pool.query(
-    'INSERT INTO drawings (drawing_data, text, created_at) VALUES ($1, $2, NOW()) RETURNING id',
-    [drawingData, text]
+    'INSERT INTO drawings (drawing_data, text, author, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id',
+    [drawingData, text, author]
   );
   res.json({ id: result.rows[0].id });
 });
 
 // Get all drawings
 app.get('/api/drawings', async (req, res) => {
-  const result = await pool.query('SELECT id, drawing_data, text, created_at FROM drawings ORDER BY created_at DESC');
+  const result = await pool.query('SELECT id, drawing_data, text, author, created_at FROM drawings ORDER BY created_at DESC');
   res.json(result.rows);
 });
 
