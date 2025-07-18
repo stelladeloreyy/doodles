@@ -24,6 +24,7 @@ export default function DrawingCanvas({
   const [drawing, setDrawing] = useState(false)
   const [lines, setLines] = useState<Line[]>([])
   const [currentLine, setCurrentLine] = useState<Line>([])
+  const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null)
 
   // Chaikin's algorithm for smoothing a line
   function smoothLine(line: { x: number, y: number }[], iterations = 2) {
@@ -59,14 +60,22 @@ export default function DrawingCanvas({
     ctx.strokeStyle = '#000'
     ctx.lineWidth = 2
     lines.forEach(line => {
-      const smooth = smoothLine(line, 2)
-      if (smooth.length === 0) return
-      ctx.beginPath()
-      ctx.moveTo(smooth[0].x, smooth[0].y)
-      for (let i = 1; i < smooth.length; i++) {
-        ctx.lineTo(smooth[i].x, smooth[i].y)
+      if (line.length === 1) {
+        // Draw a dot for single-point lines, radius = lineWidth
+        ctx.fillStyle = '#000'
+        ctx.beginPath()
+        ctx.arc(line[0].x, line[0].y, ctx.lineWidth, 0, 2 * Math.PI)
+        ctx.fill()
+      } else {
+        const smooth = smoothLine(line, 2)
+        if (smooth.length === 0) return
+        ctx.beginPath()
+        ctx.moveTo(smooth[0].x, smooth[0].y)
+        for (let i = 1; i < smooth.length; i++) {
+          ctx.lineTo(smooth[i].x, smooth[i].y)
+        }
+        ctx.stroke()
       }
-      ctx.stroke()
     })
   }, [lines])
 
@@ -81,8 +90,9 @@ export default function DrawingCanvas({
   }
 
   const startDrawing = (e: React.MouseEvent) => {
-    setDrawing(true)
     const { x, y } = getOffset(e)
+    setDrawing(true)
+    setMouseDownPos({ x, y })
     setCurrentLine([{ x, y }])
   }
 
@@ -92,12 +102,22 @@ export default function DrawingCanvas({
     setCurrentLine(line => [...line, { x, y }])
   }
 
-  const stopDrawing = () => {
-    if (drawing && currentLine.length > 0) {
-      setLines(lines => [...lines, currentLine])
-      setCurrentLine([])
-    }
+  const stopDrawing = (e: React.MouseEvent) => {
+    if (!drawing) return
     setDrawing(false)
+    const { x, y } = getOffset(e)
+    if (
+      mouseDownPos &&
+      Math.abs(mouseDownPos.x - x) < 2 &&
+      Math.abs(mouseDownPos.y - y) < 2
+    ) {
+      // Treat as a dot (single-point line)
+      setLines(lines => [...lines, [{ x: mouseDownPos.x, y: mouseDownPos.y }]])
+    } else if (currentLine.length > 1) {
+      setLines(lines => [...lines, currentLine])
+    }
+    setCurrentLine([])
+    setMouseDownPos(null)
   }
 
   // Draw current line as user draws
@@ -111,14 +131,21 @@ export default function DrawingCanvas({
     ctx.strokeStyle = '#000'
     ctx.lineWidth = 2
     lines.forEach(line => {
-      const smooth = smoothLine(line, 2)
-      if (smooth.length === 0) return
-      ctx.beginPath()
-      ctx.moveTo(smooth[0].x, smooth[0].y)
-      for (let i = 1; i < smooth.length; i++) {
-        ctx.lineTo(smooth[i].x, smooth[i].y)
+      if (line.length === 1) {
+        ctx.fillStyle = '#000'
+        ctx.beginPath()
+        ctx.arc(line[0].x, line[0].y, ctx.lineWidth, 0, 2 * Math.PI)
+        ctx.fill()
+      } else {
+        const smooth = smoothLine(line, 2)
+        if (smooth.length === 0) return
+        ctx.beginPath()
+        ctx.moveTo(smooth[0].x, smooth[0].y)
+        for (let i = 1; i < smooth.length; i++) {
+          ctx.lineTo(smooth[i].x, smooth[i].y)
+        }
+        ctx.stroke()
       }
-      ctx.stroke()
     })
     const smooth = smoothLine(currentLine, 2)
     ctx.beginPath()
