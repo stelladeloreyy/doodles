@@ -1,4 +1,5 @@
 import React from 'react'
+import './DrawingGallery.css'
 
 interface Drawing {
   id: number
@@ -50,26 +51,42 @@ export default function DrawingGallery({
         }}
       >
         {paginatedDrawings.map(d => (
-          <div key={d.id} style={{ border: '1px solid #ccc', padding: 8, background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <img
-              src={d.drawing_data}
-              alt={`Drawing ${d.id}`}
-              style={{
-                width: window.innerWidth / 8,
-                height: window.innerWidth / 10,
-                objectFit: 'contain',
-                display: 'block'
-              }}
-            />
-            <div style={{ fontWeight: 'bold', marginTop: 4 }}>{d.text || <span style={{ color: '#aaa' }}>Untitled</span>}</div>
-            {d.author && d.author.trim() !== '' && (
-              <div style={{ fontSize: 12, color: '#555' }}>by {d.author}</div>
-            )}
-            <div style={{ fontSize: 10, color: '#888' }}>{new Date(d.created_at).toLocaleString()}</div>
+          <div key={d.id} className="flip-card">
+            <div className="flip-card-inner">
+              <div className="flip-card-front">
+                <img
+                  src={d.drawing_data}
+                  alt={`Drawing ${d.id}`}
+                />
+              </div>
+              <div className="flip-card-back" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{d.text || <span style={{ color: '#aaa' }}>Untitled</span>}</div>
+                {d.author && d.author.trim() !== '' && (
+                  <div style={{ fontSize: 14, color: '#555', marginBottom: 4 }}>by {d.author}</div>
+                )}
+                <div style={{ fontSize: 12, color: '#888' }}>{new Date(d.created_at).toLocaleString()}</div>
+              </div>
+            </div>
           </div>
         ))}
         {Array.from({ length: drawingsPerPage - paginatedDrawings.length }).map((_, i) => (
-          <div key={`empty-${i}`} />
+          <div
+            key={`empty-${i}`}
+            style={{
+              border: '1px dashed #ccc',
+              padding: 8,
+              background: '#fafafa',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              width: window.innerWidth / 7,
+              height: window.innerWidth / 6,
+              boxSizing: 'border-box',
+              justifyContent: 'center'
+            }}
+          >
+            {/* Empty slot rectangle */}
+          </div>
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, alignItems: 'center', position: 'relative' }}>

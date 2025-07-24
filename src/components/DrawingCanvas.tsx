@@ -57,12 +57,12 @@ export default function DrawingCanvas({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.strokeStyle = '#000'
+    ctx.strokeStyle = '#9c4d95'
     ctx.lineWidth = 2
     lines.forEach(line => {
       if (line.length === 1) {
         // Draw a dot for single-point lines, radius = lineWidth
-        ctx.fillStyle = '#000'
+        ctx.fillStyle = '#9c4d95'
         ctx.beginPath()
         ctx.arc(line[0].x, line[0].y, ctx.lineWidth, 0, 2 * Math.PI)
         ctx.fill()
@@ -128,11 +128,11 @@ export default function DrawingCanvas({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.strokeStyle = '#000'
+    ctx.strokeStyle = '#9c4d95'
     ctx.lineWidth = 2
     lines.forEach(line => {
       if (line.length === 1) {
-        ctx.fillStyle = '#000'
+        ctx.fillStyle = '#9c4d95'
         ctx.beginPath()
         ctx.arc(line[0].x, line[0].y, ctx.lineWidth, 0, 2 * Math.PI)
         ctx.fill()
@@ -187,8 +187,8 @@ export default function DrawingCanvas({
       <h2>Draw below!</h2>
       <canvas
         ref={canvasRef}
-        width={window.innerWidth / 4}
-        height={window.innerWidth / 5}
+        width={'250px'}
+        height={'300px'}
         style={{ border: '1px solid #ccc', background: '#fff', touchAction: 'none' }}
         onMouseDown={startDrawing}
         onMouseMove={draw}
